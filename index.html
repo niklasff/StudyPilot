@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Task Demo</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <h1>Lisää tehtävä</h1>
+
+    <!-- Lomakeosio: käyttäjä syöttää otsikon ja deadlinen -->
+    <div class="row">
+      <label>Otsikko:
+        <input id="title" type="text" placeholder="Esim. Osta maitoa" required />
+      </label>
+    </div>
+
+    <div class="row">
+      <label>Deadline:
+        <input id="deadline" type="date" required />
+      </label>
+    </div>
+
+    <div class="row">
+      <!-- Nappi, joka laukaisee POST-pyynnön backendille -->
+      <button id="addBtn">Lisää</button>
+    </div>
+
+    <h2>Nykyiset tehtävät</h2>
+    <!-- Tänne piirtyy tehtävälista JavaScriptillä -->
+    <div id="list" class="list"><div class="empty">[tyhjä]</div></div>
+  </div>
+
+  <script>
+    // Backendin perus-osoite; fetch-kutsut osoittavat tänne
+    const baseUrl = "http://127.0.0.1:8000";
+
+    /**
+     * Pieni apufunktio: tulostaa käyttäjän syöttämää tekstiä turvallisesti HTML:ään
+     * (estää <script>-tagit yms. rikkoutumisen).
+     */
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    /**
+     * Hakee kaikki tehtävät (GET /tasks) ja piirtää listan DOM:iin.
+     * Jokaiselle riville tulee Poista-nappi, joka kutsuu DELETE /tasks/{id}.
+     */
+    async function loadTasks() {
+      const container = document.getElementById("list");
+      container.innerHTML = "<div class='empty'>Ladataan...</div>";
+
+      try {
+        const res = await fetch(`${baseUrl}/tasks`);
+        if (!res.ok) throw new Error(`GET /tasks epäonnistui: ${res.status}`);
+        const data = await res.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+          container.innerHTML = "<div class='empty'>[tyhjä]</div>";
+          return;
+        }
+
+        // Tyhjennetään lista ja rakennetaan rivit
+        container.innerHTML = "";
+        data.forEach(item => {
+          // Yksi rivikomponentti
+          const row = document.createElement("div");
+          row.className = "item";
+
+          // Vasemmalle tekstit
+          const info = document.createElement("div");
+          info.innerHTML = `<strong>#${item.id}</strong> ${escapeHtml(item.title)} <span class="meta">(dl: ${item.deadline})</span>`;
+
+          // Oikealle toiminnot
+          const actions = document.createElement("div");
+
+          // Poista-nappi: lähettää DELETE-kyselyn id:n perusteella
+          const del = document.createElement("button");
+          del.textContent = "Poista";
+          del.className = "secondary";
+          del.title = `Poista task #${item.id}`;
+          del.onclick = () => deleteTask(item.id);
+
+          actions.appendChild(del);
+          row.appendChild(info);
+          row.appendChild(actions);
+          container.appendChild(row);
+        });
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = "<div class='empty'>Virhe ladattaessa listaa.</div>";
+        alert(err.message || err);
+      }
+    }
+
+    /**
+     * Lisää uuden tehtävän (POST /tasks).
+     * Lukee arvot kentistä, tekee JSON-runkoisen pyynnön ja päivittää listan.
+     */
+    async function addTask() {
+      const titleEl = document.getElementById("title");
+      const deadlineEl = document.getElementById("deadline");
+      const title = titleEl.value.trim();
+      const deadline = deadlineEl.value;
+
+      if (!title || !deadline) {
+        alert("Täytä sekä otsikko että deadline.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${baseUrl}/tasks`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, deadline })
+        });
+        if (!res.ok) {
+          const msg = await res.text();
+          throw new Error(msg || `POST /tasks epäonnistui: ${res.status}`);
+        }
+        // Tyhjennetään lomake ja päivitetään näkymä
+        titleEl.value = "";
+        deadlineEl.value = "";
+        await loadTasks();
+      } catch (err) {
+        alert(err.message || err);
+      }
+    }
+
+    /**
+     * Poistaa tehtävän (DELETE /tasks/{id}).
+     * Onnistuneessa poistossa backend palauttaa 204 No Content.
+     */
+    async function deleteTask(id) {
+      if (!confirm(`Poistetaanko task #${id}?`)) return;
+
+      try {
+        const res = await fetch(`${baseUrl}/tasks/${id}`, { method: "DELETE" });
+        if (!(res.ok || res.status === 204)) {
+          const msg = await res.text();
+          throw new Error(msg || `DELETE /tasks/${id} epäonnistui: ${res.status}`);
+        }
+        await loadTasks();
+      } catch (err) {
+        alert(err.message || err);
+      }
+    }
+
+    // Kytketään "Lisää" -nappi toimintaan ja ladataan lista sivun avautuessa
+    document.getElementById("addBtn").addEventListener("click", addTask);
+    loadTasks();
+  </script>
+</body>
+</html>
