@@ -13,7 +13,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+#tehty niklas haara
 # "Tietokanta" muistissa
 # - tasks: listaa kaikki Task-oliot
 # - next_id: juokseva tunniste uusille tehtäville
