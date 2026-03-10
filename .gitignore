@@ -1,0 +1,19 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+.env
+.venv/
+
+# VS Code
+.vscode/
+
+# Temp and logs
+*.log
+*.sqlite3
+
+# Node stuff (jos joskus lisäät Reactin samaan projektiin)
+node_modules/
+dist/
