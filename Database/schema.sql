@@ -1,0 +1,33 @@
+CREATE TABLE IF NOT EXISTS users (
+    userid INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+CREATE TABLE IF NOT EXISTS todo (
+    todoid INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    deadline TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    userid INTEGER NOT NULL,
+    FOREIGN KEY (userid) REFERENCES users(userid)
+);
+
+
+
+
+CREATE TABLE IF NOT EXISTS calendar(
+    eventid INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    userid INTEGER NOT NULL,
+    FOREIGN KEY (userid) REFERENCES users(userid)
+
+);
