@@ -159,3 +159,68 @@ def update_task(task_id: int, task: Task, userid: int = Depends(get_current_user
         raise HTTPException(status_code=404, detail="Task not found")
     task.id = task_id
     return task
+
+class Event(BaseModel):
+    id: Optional[int] = None
+    name: str
+    description: Optional[str] = None
+    start_time: str
+    end_time: Optional[str] = None
+    event_type: Optional[str] = "personal"
+
+@app.post("/events")
+def create_event(event: Event, userid: int = Depends(get_current_user)):
+    conn = get_connection()
+    cursor = conn.execute(
+        "INSERT INTO calendar (userid, name, description, start_time, end_time, event_type) VALUES (?, ?, ?, ?, ?, ?)",
+        (userid, event.name, event.description, event.start_time, event.end_time, event.event_type)
+    )
+    conn.commit()
+    event.id = cursor.lastrowid
+    conn.close()
+    return event
+
+@app.get("/events")
+def get_events(userid: int = Depends(get_current_user)):
+    conn = get_connection()
+    events = conn.execute(
+        "SELECT * FROM calendar WHERE userid = ?", (userid,)
+    ).fetchall()
+    conn.close()
+    return [dict(row) for row in events]
+
+@app.get("/events/{event_id}")
+def get_event(event_id: int, userid: int = Depends(get_current_user)):
+    conn = get_connection()
+    event = conn.execute(
+        "SELECT * FROM calendar WHERE eventid = ? AND userid = ?", (event_id, userid)
+    ).fetchone()
+    conn.close()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return dict(event)
+
+@app.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_event(event_id: int, userid: int = Depends(get_current_user)):
+    conn = get_connection()
+    result = conn.execute(
+        "DELETE FROM calendar WHERE eventid = ? AND userid = ?", (event_id, userid)
+    )
+    conn.commit()
+    conn.close()
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+@app.put("/events/{event_id}")
+def update_event(event_id: int, event: Event, userid: int = Depends(get_current_user)):
+    conn = get_connection()
+    result = conn.execute(
+        "UPDATE calendar SET name = ?, description = ?, start_time = ?, end_time = ?, event_type = ? WHERE eventid = ? AND userid = ?",
+        (event.name, event.description, event.start_time, event.end_time, event.event_type, event_id, userid)
+    )
+    conn.commit()
+    conn.close()
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Event not found")
+    event.id = event_id
+    return event
