@@ -224,3 +224,22 @@ def update_event(event_id: int, event: Event, userid: int = Depends(get_current_
         raise HTTPException(status_code=404, detail="Event not found")
     event.id = event_id
     return event
+
+# Profiilit
+
+class UserProfile(BaseModel):
+    userid: int
+    username: str
+    email: str
+    created_at: str
+
+@app.get("/me", response_model=UserProfile)
+def get_profile(userid: int = Depends(get_current_user)):
+    conn = get_connection()
+    user = conn.execute(
+        "SELECT userid, username, email, created_at FROM users WHERE userid = ?", (userid,)
+    ).fetchone()
+    conn.close()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return dict(user)
