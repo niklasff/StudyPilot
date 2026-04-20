@@ -1,162 +1,273 @@
 <!doctype html>
 <html lang="fi">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Task Demo</title>
-<link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <div class="wrap">
-    <h1>Lisää tehtävä</h1>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Task Demo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Lisää tehtävä</h1>
 
-    <!-- Lomakeosio: käyttäjä syöttää otsikon ja deadlinen -->
-    <div class="row">
-      <label>Otsikko:
-        <input id="title" type="text" placeholder="Esim. Osta maitoa" required />
-      </label>
+      <!-- Lomakeosio: käyttäjä syöttää otsikon ja deadlinen -->
+      <div class="row">
+        <label
+          >Otsikko:
+          <input
+            id="title"
+            type="text"
+            placeholder="Esim. Osta maitoa"
+            required
+          />
+        </label>
+      </div>
+
+      <div class="row">
+        <label
+          >Deadline:
+          <input id="deadline" type="date" required />
+        </label>
+      </div>
+
+      <div class="row">
+        <!-- Nappi, joka laukaisee POST-pyynnön backendille -->
+        <button id="addBtn">Lisää</button>
+      </div>
+      <div class="row">
+        <button id="toggleCalBtn">📅 Näytä kalenteri</button>
+      </div>
+
+      <div id="calendar" style="display: none">
+        <div id="calHeader" class="cal-header">
+          <button id="prevBtn">&#8592; Edellinen</button>
+          <span id="calTitle"></span>
+          <button id="nextBtn">Seuraava &#8594;</button>
+        </div>
+        <div id="calGrid" class="cal-grid"></div>
+      </div>
+
+      <h2>Nykyiset tehtävät</h2>
+      <!-- Tänne piirtyy tehtävälista JavaScriptillä -->
+      <div id="list" class="list"><div class="empty">[tyhjä]</div></div>
     </div>
 
-    <div class="row">
-      <label>Deadline:
-        <input id="deadline" type="date" required />
-      </label>
-    </div>
+    <script>
+      // Backendin perus-osoite; fetch-kutsut osoittavat tänne
+      const baseUrl = "http://127.0.0.1:8000";
 
-    <div class="row">
-      <!-- Nappi, joka laukaisee POST-pyynnön backendille -->
-      <button id="addBtn">Lisää</button>
-    </div>
+      /**
+       * Pieni apufunktio: tulostaa käyttäjän syöttämää tekstiä turvallisesti HTML:ään
+       * (estää <script>-tagit yms. rikkoutumisen).
+       */
+      function escapeHtml(str) {
+        return String(str)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
 
-    <h2>Nykyiset tehtävät</h2>
-    <!-- Tänne piirtyy tehtävälista JavaScriptillä -->
-    <div id="list" class="list"><div class="empty">[tyhjä]</div></div>
-  </div>
+      /**
+       * Hakee kaikki tehtävät (GET /tasks) ja piirtää listan DOM:iin.
+       * Jokaiselle riville tulee Poista-nappi, joka kutsuu DELETE /tasks/{id}.
+       */
+      async function loadTasks() {
+        const container = document.getElementById("list");
+        container.innerHTML = "<div class='empty'>Ladataan...</div>";
 
-  <script>
-    // Backendin perus-osoite; fetch-kutsut osoittavat tänne
-    const baseUrl = "http://127.0.0.1:8000";
+        try {
+          const res = await fetch(`${baseUrl}/tasks`);
+          if (!res.ok) throw new Error(`GET /tasks epäonnistui: ${res.status}`);
+          const data = await res.json();
 
-    /**
-     * Pieni apufunktio: tulostaa käyttäjän syöttämää tekstiä turvallisesti HTML:ään
-     * (estää <script>-tagit yms. rikkoutumisen).
-     */
-    function escapeHtml(str) {
-      return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
+          if (!Array.isArray(data) || data.length === 0) {
+            container.innerHTML = "<div class='empty'>[tyhjä]</div>";
+            return;
+          }
 
-    /**
-     * Hakee kaikki tehtävät (GET /tasks) ja piirtää listan DOM:iin.
-     * Jokaiselle riville tulee Poista-nappi, joka kutsuu DELETE /tasks/{id}.
-     */
-    async function loadTasks() {
-      const container = document.getElementById("list");
-      container.innerHTML = "<div class='empty'>Ladataan...</div>";
+          // Tyhjennetään lista ja rakennetaan rivit
+          container.innerHTML = "";
+          data.forEach((item) => {
+            // Yksi rivikomponentti
+            const row = document.createElement("div");
+            row.className = "item";
 
-      try {
-        const res = await fetch(`${baseUrl}/tasks`);
-        if (!res.ok) throw new Error(`GET /tasks epäonnistui: ${res.status}`);
-        const data = await res.json();
+            // Vasemmalle tekstit
+            const info = document.createElement("div");
+            info.innerHTML = `<strong>#${item.id}</strong> ${escapeHtml(item.title)} <span class="meta">(dl: ${item.deadline})</span>`;
 
-        if (!Array.isArray(data) || data.length === 0) {
-          container.innerHTML = "<div class='empty'>[tyhjä]</div>";
+            // Oikealle toiminnot
+            const actions = document.createElement("div");
+
+            // Poista-nappi: lähettää DELETE-kyselyn id:n perusteella
+            const del = document.createElement("button");
+            del.textContent = "Poista";
+            del.className = "secondary";
+            del.title = `Poista task #${item.id}`;
+            del.onclick = () => deleteTask(item.id);
+
+            actions.appendChild(del);
+            row.appendChild(info);
+            row.appendChild(actions);
+            container.appendChild(row);
+          });
+        } catch (err) {
+          console.error(err);
+          container.innerHTML =
+            "<div class='empty'>Virhe ladattaessa listaa.</div>";
+          alert(err.message || err);
+        }
+      }
+
+      /**
+       * Lisää uuden tehtävän (POST /tasks).
+       * Lukee arvot kentistä, tekee JSON-runkoisen pyynnön ja päivittää listan.
+       */
+      async function addTask() {
+        const titleEl = document.getElementById("title");
+        const deadlineEl = document.getElementById("deadline");
+        const title = titleEl.value.trim();
+        const deadline = deadlineEl.value;
+
+        if (!title || !deadline) {
+          alert("Täytä sekä otsikko että deadline.");
           return;
         }
 
-        // Tyhjennetään lista ja rakennetaan rivit
-        container.innerHTML = "";
-        data.forEach(item => {
-          // Yksi rivikomponentti
-          const row = document.createElement("div");
-          row.className = "item";
-
-          // Vasemmalle tekstit
-          const info = document.createElement("div");
-          info.innerHTML = `<strong>#${item.id}</strong> ${escapeHtml(item.title)} <span class="meta">(dl: ${item.deadline})</span>`;
-
-          // Oikealle toiminnot
-          const actions = document.createElement("div");
-
-          // Poista-nappi: lähettää DELETE-kyselyn id:n perusteella
-          const del = document.createElement("button");
-          del.textContent = "Poista";
-          del.className = "secondary";
-          del.title = `Poista task #${item.id}`;
-          del.onclick = () => deleteTask(item.id);
-
-          actions.appendChild(del);
-          row.appendChild(info);
-          row.appendChild(actions);
-          container.appendChild(row);
-        });
-      } catch (err) {
-        console.error(err);
-        container.innerHTML = "<div class='empty'>Virhe ladattaessa listaa.</div>";
-        alert(err.message || err);
-      }
-    }
-
-    /**
-     * Lisää uuden tehtävän (POST /tasks).
-     * Lukee arvot kentistä, tekee JSON-runkoisen pyynnön ja päivittää listan.
-     */
-    async function addTask() {
-      const titleEl = document.getElementById("title");
-      const deadlineEl = document.getElementById("deadline");
-      const title = titleEl.value.trim();
-      const deadline = deadlineEl.value;
-
-      if (!title || !deadline) {
-        alert("Täytä sekä otsikko että deadline.");
-        return;
-      }
-
-      try {
-        const res = await fetch(`${baseUrl}/tasks`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, deadline })
-        });
-        if (!res.ok) {
-          const msg = await res.text();
-          throw new Error(msg || `POST /tasks epäonnistui: ${res.status}`);
+        try {
+          const res = await fetch(`${baseUrl}/tasks`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, deadline }),
+          });
+          if (!res.ok) {
+            const msg = await res.text();
+            throw new Error(msg || `POST /tasks epäonnistui: ${res.status}`);
+          }
+          // Tyhjennetään lomake ja päivitetään näkymä
+          titleEl.value = "";
+          deadlineEl.value = "";
+          await loadTasks();
+        } catch (err) {
+          alert(err.message || err);
         }
-        // Tyhjennetään lomake ja päivitetään näkymä
-        titleEl.value = "";
-        deadlineEl.value = "";
-        await loadTasks();
-      } catch (err) {
-        alert(err.message || err);
       }
-    }
 
-    /**
-     * Poistaa tehtävän (DELETE /tasks/{id}).
-     * Onnistuneessa poistossa backend palauttaa 204 No Content.
-     */
-    async function deleteTask(id) {
-      if (!confirm(`Poistetaanko task #${id}?`)) return;
+      /**
+       * Poistaa tehtävän (DELETE /tasks/{id}).
+       * Onnistuneessa poistossa backend palauttaa 204 No Content.
+       */
+      async function deleteTask(id) {
+        if (!confirm(`Poistetaanko task #${id}?`)) return;
 
-      try {
-        const res = await fetch(`${baseUrl}/tasks/${id}`, { method: "DELETE" });
-        if (!(res.ok || res.status === 204)) {
-          const msg = await res.text();
-          throw new Error(msg || `DELETE /tasks/${id} epäonnistui: ${res.status}`);
+        try {
+          const res = await fetch(`${baseUrl}/tasks/${id}`, {
+            method: "DELETE",
+          });
+          if (!(res.ok || res.status === 204)) {
+            const msg = await res.text();
+            throw new Error(
+              msg || `DELETE /tasks/${id} epäonnistui: ${res.status}`,
+            );
+          }
+          await loadTasks();
+        } catch (err) {
+          alert(err.message || err);
         }
-        await loadTasks();
-      } catch (err) {
-        alert(err.message || err);
       }
-    }
 
-    // Kytketään "Lisää" -nappi toimintaan ja ladataan lista sivun avautuessa
-    document.getElementById("addBtn").addEventListener("click", addTask);
-    loadTasks();
-  </script>
-</body>
+      // --- Kalenteri ---
+      // muistaa minkä kuukauden näkymässä ollaan
+      let calDate = new Date();
+      // tieto siitä onko kalenteri auki vai kiinni
+      let calVisible = false;
+
+      // piirtää kalenteriruudukon annettujen tehtävien perusteella
+      function renderCalendar(taskList) {
+        const year = calDate.getFullYear();
+        const month = calDate.getMonth();
+        // näytetään kuukausi ja vuosi otsikkona
+        document.getElementById("calTitle").textContent =
+          calDate.toLocaleString("fi-FI", { month: "long", year: "numeric" });
+        const grid = document.getElementById("calGrid");
+        grid.innerHTML = "";
+        // viikonpäivien otsikot
+        ["Ma", "Ti", "Ke", "To", "Pe", "La", "Su"].forEach((d) => {
+          const h = document.createElement("div");
+          h.className = "cal-day-header";
+          h.textContent = d;
+          grid.appendChild(h);
+        });
+        // lasketaan kuinka monta tyhjää ruutua tarvitaan ennen ensimmäistä päivää
+        const firstDay = new Date(year, month, 1);
+        let startOffset = firstDay.getDay() - 1;
+        if (startOffset < 0) startOffset = 6;
+        for (let i = 0; i < startOffset; i++) {
+          const empty = document.createElement("div");
+          empty.className = "cal-cell";
+          grid.appendChild(empty);
+        }
+        // luodaan ruutu jokaiselle kuukauden päivälle
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let d = 1; d <= daysInMonth; d++) {
+          const cell = document.createElement("div");
+          cell.className = "cal-cell";
+          // muodostetaan päivämäärä samassa formaatissa kuin deadline-kenttä
+          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+          // suodatetaan tämän päivän tehtävät
+          const dayTasks = taskList.filter((t) => t.deadline === dateStr);
+          cell.innerHTML = `<div class="cal-num">${d}</div>`;
+          dayTasks.forEach((t) => {
+            const tag = document.createElement("div");
+            tag.className = "cal-task";
+            tag.textContent = t.title;
+            cell.appendChild(tag);
+          });
+          // korostetaan ruutu jos siinä on tehtäviä
+          if (dayTasks.length > 0) cell.classList.add("has-task");
+          grid.appendChild(cell);
+        }
+      }
+
+      // näyttää tai piilottaa kalenterin ja hakee tehtävät tarvittaessa
+      document
+        .getElementById("toggleCalBtn")
+        .addEventListener("click", async () => {
+          calVisible = !calVisible;
+          document.getElementById("calendar").style.display = calVisible
+            ? "block"
+            : "none";
+          document.getElementById("toggleCalBtn").textContent = calVisible
+            ? "📋 Näytä tehtävälista"
+            : "📅 Näytä kalenteri";
+          if (calVisible) {
+            const res = await fetch(`${baseUrl}/tasks`);
+            const data = await res.json();
+            renderCalendar(data);
+          }
+        });
+
+      // siirrytään edelliseen kuukauteen
+      document.getElementById("prevBtn").addEventListener("click", async () => {
+        calDate.setMonth(calDate.getMonth() - 1);
+        const res = await fetch(`${baseUrl}/tasks`);
+        const data = await res.json();
+        renderCalendar(data);
+      });
+
+      // siirrytään seuraavaan kuukauteen
+      document.getElementById("nextBtn").addEventListener("click", async () => {
+        calDate.setMonth(calDate.getMonth() + 1);
+        const res = await fetch(`${baseUrl}/tasks`);
+        const data = await res.json();
+        renderCalendar(data);
+      });
+
+      // Kytketään "Lisää" -nappi toimintaan ja ladataan lista sivun avautuessa
+      document.getElementById("addBtn").addEventListener("click", addTask);
+      loadTasks();
+    </script>
+  </body>
 </html>

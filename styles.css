@@ -1,51 +1,129 @@
-    body { 
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; 
-      line-height: 1.45; 
-      margin: 0; 
-      padding: 0; 
-      background: #f6f7fb; 
-    }
-    .wrap {
-      max-width: 560px;
-      margin: 40px auto;
-      padding: 24px;
-      background: #fff;
-      border: 1px solid #e3e6ef;
-      border-radius: 12px;
-      box-shadow: 0 6px 24px rgba(0,0,0,0.06);
-    }
-    h1, h2 { margin: 0 0 12px; }
-    .row { margin: 8px 0; }
-    label { display: inline-flex; align-items: center; gap: 8px; }
-    input[type="text"], input[type="date"] { 
-      padding: 8px 10px; 
-      border: 1px solid #cfd4e2; 
-      border-radius: 8px; 
-      min-width: 260px;
-    }
-    button { 
-      padding: 8px 12px; 
-      border: 1px solid #3b82f6; 
-      background: #3b82f6; 
-      color: #fff; 
-      border-radius: 8px; 
-      cursor: pointer; 
-    }
-    button.secondary {
-      border-color: #e11d48;
-      background: #e11d48;
-    }
-    .list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
-    .item { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      gap: 10px; 
-      padding: 10px 12px; 
-      border: 1px solid #e5e7eb; 
-      border-radius: 8px; 
-      background: #fafafa; 
-    }
-    .meta { color: #555; font-size: 0.92rem; }
-    .actions { display: inline-flex; gap: 8px; }
-    .empty { color: #777; font-style: italic; }
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Arial,
+    sans-serif;
+  line-height: 1.45;
+  margin: 0;
+  padding: 0;
+  background: #f6f7fb;
+}
+.wrap {
+  max-width: 560px;
+  margin: 40px auto;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #e3e6ef;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+}
+h1,
+h2 {
+  margin: 0 0 12px;
+}
+.row {
+  margin: 8px 0;
+}
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+input[type="text"],
+input[type="date"] {
+  padding: 8px 10px;
+  border: 1px solid #cfd4e2;
+  border-radius: 8px;
+  min-width: 260px;
+}
+button {
+  padding: 8px 12px;
+  border: 1px solid #3b82f6;
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+}
+button.secondary {
+  border-color: #e11d48;
+  background: #e11d48;
+}
+.list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+}
+.meta {
+  color: #555;
+  font-size: 0.92rem;
+}
+.actions {
+  display: inline-flex;
+  gap: 8px;
+}
+.empty {
+  color: #777;
+  font-style: italic;
+}
+
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 0;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-top: 8px;
+}
+.cal-day-header {
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #555;
+  padding: 4px;
+}
+.cal-cell {
+  min-height: 64px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 4px;
+  font-size: 0.82rem;
+  background: #fafafa;
+}
+.cal-cell.has-task {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+.cal-num {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 2px;
+}
+.cal-task {
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
